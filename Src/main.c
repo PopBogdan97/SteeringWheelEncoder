@@ -30,22 +30,21 @@
 /* USER CODE BEGIN PTD */
 typedef struct
 {
-  int data_size;    // Bits sent from the sensor. Exclude the error flag
-  int error_flag;   // Return value if the encoder has errors
-  int clock_period; // Period between each data frame readed in milliseconds
-  int data_freq_Hz; // Reading speed of the data frame
-  int data[12];     // Binary value of the data readed from the steer encoder
-  int wheel_side;   // 1 for the RIGHT-wheel and 0 for the LEFT-wheel
+  int data_size;         // Bits sent from the sensor. Exclude the error flag
+  int error_flag;        // Return value if the encoder has errors
+  int error_data_status; // Here we save the actual signal from the encoder
+  int clock_period;      // Period between each data frame readed in milliseconds
+  int clock_status;      // Here the status of the clock is saved
+  int data_freq_Hz;      // Reading speed of the data frame
+  int data[12];          // Binary value of the data readed from the steer encoder
+  int steer_zero;        // In this variable will be saved the value for the position zero
+  int data_count;        // Counter used to check when the buffer is full
 
   float max_delta_angle;
   float frequency;
   int frequency_timer_Hz;
 
-  double angle0; // First angle calculated
-  double angle1; // Second angle calculated
-  double angle0_prec;
-  double angle1_prec;
-  double delta_angle;
+  int angle;          // First angle calculated
   int converted_data; // Angle data
 
   TIM_HandleTypeDef *TimerInstance; // Instance to the timer used to generate the clock to read the data
@@ -76,6 +75,8 @@ TIM_HandleTypeDef htim7;
 UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
+steer_enc steer;
+
 char hmessage[256] = "";
 
 /* USER CODE END PV */
@@ -88,7 +89,10 @@ static void MX_TIM7_Init(void);
 static void MX_USART3_UART_Init(void);
 /* USER CODE BEGIN PFP */
 void print(UART_HandleTypeDef *huart, char *text);
-
+void read_steer_SSI(steer_enc *steer);
+void check_steer_error(steer_enc *steer);
+int bin_dec(int *bin, int size);
+double Power(int base, int expn);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -128,6 +132,20 @@ int main(void)
   MX_TIM7_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
+  steer.data_size = 12;
+  steer.clock_period = 500;
+  steer.data_freq_Hz = 1500000;
+  steer.steer_zero = 0; // TO BE DEFINED
+
+  steer.ClockPinName = GPIOC;
+  steer.ClockPinNumber = GPIO_PIN_12;
+  steer.DataPinName = GPIOD;
+  steer.DataPinNumber = GPIO_PIN_2;
+  HAL_GPIO_WritePin(steer.ClockPinName, steer.data_size, GPIO_PIN_SET);
+  steer.clock_status = 1;
+
+  steer.TimerInstance = &htim7;
+
   HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
 
   //Enabling the Timer that gives the time between each reading
@@ -141,28 +159,28 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-    HAL_Delay(100);
+    HAL_Delay(200);
 
     HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
     HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
 
-    HAL_Delay(100);
+    HAL_Delay(200);
 
     HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14);
     HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
 
-    HAL_Delay(100);
+    HAL_Delay(200);
 
     HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14);
     HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
 
-    HAL_Delay(100);
+    HAL_Delay(200);
 
     HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
     HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
 
-    sprintf(hmessage, "All working");
-    print(&huart3, hmessage);
+    // sprintf(hmessage, "All working");
+    // print(&huart3, hmessage);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -452,6 +470,14 @@ void print(UART_HandleTypeDef *huart, char *text)
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
+  char mes[200] = "";
+  int val = -1;
+  int val2 = -1;
+
+  val = __HAL_TIM_GET_COUNTER(&htim6);
+  val2 = __HAL_TIM_GET_COUNTER(&htim7);
+  sprintf(mes, "\r\n TIM6 = %d -- TIM7 = %d", val, val2);
+  print(&huart3, mes);
   /**
    * This interrupt is used to start the clock to retrieve the data frame from the encoder
   */
@@ -466,7 +492,104 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
   if (htim == &htim6)
   {
+    read_steer_SSI(&steer);
   }
+}
+
+void read_steer_SSI(steer_enc *steer)
+{
+  // check if the status of clock given as input for the encoder
+  if (steer->data_count < steer->data_size)
+  {
+
+    if (steer->clock_status)
+    {
+      // In this case the clock is falling, so we are in the middle of the bit sent by the encoder
+      // so, we can read the bit and be sure that it is correct
+      steer->clock_status = 0;
+      HAL_GPIO_WritePin(steer->ClockPinName, steer->data_size, GPIO_PIN_RESET);
+      // In the first falling there is no data, so we start reading only from the second falling
+      if (steer->data_count > 0)
+      {
+        steer->data[steer->data_count] = HAL_GPIO_ReadPin(steer->DataPinName, steer->DataPinNumber);
+      }
+    }
+    else
+    {
+      /* In this case the clock is rising and the encoder is giving us the next bit to read */
+      steer->clock_status = 1;
+      HAL_GPIO_WritePin(steer->ClockPinName, steer->data_size, GPIO_PIN_SET);
+      steer->data_count++;
+    }
+  }
+  else if (steer->data_count = steer->data_size)
+  {
+    /**
+     * Now we can start to convert the binary number and get the angle of the steering.
+     * Then we are going to restart the timer 7 in order to get another data frame
+    */
+
+    steer->converted_data = bin_dec(steer->data, steer->data_size);
+
+    char resolution_mes[256] = "";
+    sprintf(resolution_mes, "\r\nresolution = %u \n", steer->converted_data);
+    print(&huart3, resolution_mes);
+
+    // stop the timer 6 and restart the timer 7
+    HAL_TIM_Base_Stop(&htim6);
+    // The next line it is not necessary but can be a good practice
+    __HAL_TIM_SET_COUNTER(&htim6, 0);
+
+    HAL_TIM_Base_Start(&htim7);
+    HAL_TIM_Base_Start_IT(&htim7);
+  }
+  else
+  {
+    /* in this case we have an error */
+    check_steer_error(steer);
+  }
+}
+
+void check_steer_error(steer_enc *steer)
+{
+  steer->error_flag = 1;
+  steer->error_data_status = HAL_GPIO_ReadPin(steer->DataPinName, steer->DataPinNumber);
+  print(&huart3, "\nError during the SSI reading!\n");
+}
+
+//function to calculate the decimal value from MSB binary array
+//bin = pointer to binary array
+//max = size of the array
+int bin_dec(int *bin, int size)
+{
+
+  int dec = 0;
+
+  for (int i = 0; i < size; i++)
+  {
+    if (bin[i] == 1)
+    {
+      dec += Power(2, size - i - 1);
+    }
+  }
+  return dec;
+}
+
+//function to calculate the power of a given number
+double Power(int base, int expn)
+{
+
+  double result = 1;
+
+  if (expn != 0)
+  {
+    for (int j = 0; j < expn; j++)
+    {
+      result = result * base;
+    }
+  }
+
+  return result;
 }
 
 /* USER CODE END 4 */
