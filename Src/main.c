@@ -89,7 +89,7 @@ static void MX_TIM7_Init(void);
 static void MX_USART3_UART_Init(void);
 /* USER CODE BEGIN PFP */
 void print(UART_HandleTypeDef *huart, char *text);
-void read_steer_SSI(steer_enc *steer);
+void read_steer_SSI();
 void check_steer_error(steer_enc *steer);
 int bin_dec(int *bin, int size);
 double Power(int base, int expn);
@@ -132,6 +132,11 @@ int main(void)
   MX_TIM7_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
+  RCC->APB1ENR |= (RCC_APB1ENR_TIM6EN | RCC_APB1ENR_TIM7EN); //enable MCU debug module clock
+  HAL_DBGMCU_EnableDBGStandbyMode();
+  HAL_DBGMCU_EnableDBGStopMode();
+  DBGMCU->APB1FZ |= (DBGMCU_APB1_FZ_DBG_TIM6_STOP | DBGMCU_APB1_FZ_DBG_TIM7_STOP);
+
   steer.data_size = 12;
   steer.clock_period = 500;
   steer.data_freq_Hz = 1500000;
@@ -492,47 +497,61 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
   if (htim == &htim6)
   {
-    read_steer_SSI(&steer);
+    read_steer_SSI();
   }
 }
 
-void read_steer_SSI(steer_enc *steer)
+void read_steer_SSI()
 {
+  char message[256] = "";
+  char message2[256] = "";
+  char mes[200] = "";
+  int val = -1;
+  int val2 = -1;
+
+  sprintf(message, "\r\n data_count = %u -- clock_status = %u", steer.data_count, steer.clock_status);
+  // sprintf(message2, "\r\nSpeed1 = %f -- Speed2 = %f", wheel_speed, wheel_speed2);
+  print(&huart3, message);
+  // print(&huart3, message2);
+  val = __HAL_TIM_GET_COUNTER(&htim6);
+  val2 = __HAL_TIM_GET_COUNTER(&htim7);
+  sprintf(mes, "\r\n Inside the SSI  =>  TIM6 = %d -- TIM7 = %d", val, val2);
+  print(&huart3, mes);
   // check if the status of clock given as input for the encoder
-  if (steer->data_count < steer->data_size)
+  if (steer.data_count < steer.data_size)
   {
 
-    if (steer->clock_status)
+    if (steer.clock_status)
     {
       // In this case the clock is falling, so we are in the middle of the bit sent by the encoder
       // so, we can read the bit and be sure that it is correct
-      steer->clock_status = 0;
-      HAL_GPIO_WritePin(steer->ClockPinName, steer->data_size, GPIO_PIN_RESET);
+      steer.clock_status = 0;
+      HAL_GPIO_WritePin(steer.ClockPinName, steer.data_size, GPIO_PIN_RESET);
       // In the first falling there is no data, so we start reading only from the second falling
-      if (steer->data_count > 0)
+      if (steer.data_count > 0)
       {
-        steer->data[steer->data_count] = HAL_GPIO_ReadPin(steer->DataPinName, steer->DataPinNumber);
+        steer.data[steer.data_count] = HAL_GPIO_ReadPin(steer.DataPinName, steer.DataPinNumber);
       }
     }
     else
     {
       /* In this case the clock is rising and the encoder is giving us the next bit to read */
-      steer->clock_status = 1;
-      HAL_GPIO_WritePin(steer->ClockPinName, steer->data_size, GPIO_PIN_SET);
-      steer->data_count++;
+      steer.clock_status = 1;
+      HAL_GPIO_WritePin(steer.ClockPinName, steer.data_size, GPIO_PIN_SET);
+      steer.data_count++;
     }
   }
-  else if (steer->data_count = steer->data_size)
+  else if (steer.data_count = steer.data_size)
   {
     /**
      * Now we can start to convert the binary number and get the angle of the steering.
      * Then we are going to restart the timer 7 in order to get another data frame
     */
 
-    steer->converted_data = bin_dec(steer->data, steer->data_size);
+    steer.converted_data = bin_dec(steer.data, steer.data_size);
 
     char resolution_mes[256] = "";
-    sprintf(resolution_mes, "\r\nresolution = %u \n", steer->converted_data);
+    sprintf(resolution_mes, "\r\nresolution = %u \n", steer.converted_data);
     print(&huart3, resolution_mes);
 
     // stop the timer 6 and restart the timer 7
@@ -546,7 +565,7 @@ void read_steer_SSI(steer_enc *steer)
   else
   {
     /* in this case we have an error */
-    check_steer_error(steer);
+    check_steer_error(&steer);
   }
 }
 
