@@ -28,7 +28,34 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+typedef struct
+{
+  int data_size;    // Bits sent from the sensor. Exclude the error flag
+  int error_flag;   // Return value if the encoder has errors
+  int clock_period; // Period between each data frame readed in milliseconds
+  int data_freq_Hz; // Reading speed of the data frame
+  int data[12];     // Binary value of the data readed from the steer encoder
+  int wheel_side;   // 1 for the RIGHT-wheel and 0 for the LEFT-wheel
 
+  float max_delta_angle;
+  float frequency;
+  int frequency_timer_Hz;
+
+  double angle0; // First angle calculated
+  double angle1; // Second angle calculated
+  double angle0_prec;
+  double angle1_prec;
+  double delta_angle;
+  int converted_data; // Angle data
+
+  TIM_HandleTypeDef *TimerInstance; // Instance to the timer used to generate the clock to read the data
+
+  GPIO_TypeDef *ClockPinName;
+  GPIO_TypeDef *DataPinName;
+  uint16_t ClockPinNumber;
+  uint16_t DataPinNumber;
+
+} steer_enc;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -60,7 +87,7 @@ static void MX_TIM6_Init(void);
 static void MX_TIM7_Init(void);
 static void MX_USART3_UART_Init(void);
 /* USER CODE BEGIN PFP */
-void print(UART_HandleTypeDef *huart, char* text);
+void print(UART_HandleTypeDef *huart, char *text);
 
 /* USER CODE END PFP */
 
@@ -78,7 +105,6 @@ int main(void)
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
-  
 
   /* MCU Configuration--------------------------------------------------------*/
 
@@ -102,10 +128,11 @@ int main(void)
   MX_TIM7_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
-  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0); 
+  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
 
   //Enabling the Timer that gives the time between each reading
-
+  HAL_TIM_Base_Start(&htim7);
+  HAL_TIM_Base_Start_IT(&htim7);
 
   /* USER CODE END 2 */
 
@@ -133,10 +160,6 @@ int main(void)
 
     HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
     HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
-
-    char *msg = "Hello Nucleo Fun!\n\r";
-
-  HAL_UART_Transmit(&huart3, (uint8_t*)msg, strlen(msg), 0xFFFF);
 
     sprintf(hmessage, "All working");
     print(&huart3, hmessage);
@@ -182,8 +205,7 @@ void SystemClock_Config(void)
   }
   /** Initializes the CPU, AHB and APB busses clocks 
   */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
@@ -236,7 +258,6 @@ static void MX_TIM6_Init(void)
   /* USER CODE BEGIN TIM6_Init 2 */
 
   /* USER CODE END TIM6_Init 2 */
-
 }
 
 /**
@@ -274,7 +295,6 @@ static void MX_TIM7_Init(void)
   /* USER CODE BEGIN TIM7_Init 2 */
 
   /* USER CODE END TIM7_Init 2 */
-
 }
 
 /**
@@ -309,7 +329,6 @@ static void MX_USART3_UART_Init(void)
   /* USER CODE BEGIN USART3_Init 2 */
 
   /* USER CODE END USART3_Init 2 */
-
 }
 
 /**
@@ -330,7 +349,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOG_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, LD1_Pin|LD3_Pin|LD2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, LD1_Pin | LD3_Pin | LD2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(USB_PowerSwitchOn_GPIO_Port, USB_PowerSwitchOn_Pin, GPIO_PIN_RESET);
@@ -345,7 +364,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(USER_Btn_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : RMII_MDC_Pin RMII_RXD0_Pin RMII_RXD1_Pin */
-  GPIO_InitStruct.Pin = RMII_MDC_Pin|RMII_RXD0_Pin|RMII_RXD1_Pin;
+  GPIO_InitStruct.Pin = RMII_MDC_Pin | RMII_RXD0_Pin | RMII_RXD1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
@@ -353,7 +372,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pins : RMII_REF_CLK_Pin RMII_MDIO_Pin RMII_CRS_DV_Pin */
-  GPIO_InitStruct.Pin = RMII_REF_CLK_Pin|RMII_MDIO_Pin|RMII_CRS_DV_Pin;
+  GPIO_InitStruct.Pin = RMII_REF_CLK_Pin | RMII_MDIO_Pin | RMII_CRS_DV_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
@@ -361,7 +380,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pins : LD1_Pin LD3_Pin LD2_Pin */
-  GPIO_InitStruct.Pin = LD1_Pin|LD3_Pin|LD2_Pin;
+  GPIO_InitStruct.Pin = LD1_Pin | LD3_Pin | LD2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -389,7 +408,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(USB_OverCurrent_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : USB_SOF_Pin USB_ID_Pin USB_DM_Pin USB_DP_Pin */
-  GPIO_InitStruct.Pin = USB_SOF_Pin|USB_ID_Pin|USB_DM_Pin|USB_DP_Pin;
+  GPIO_InitStruct.Pin = USB_SOF_Pin | USB_ID_Pin | USB_DM_Pin | USB_DP_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
@@ -416,19 +435,38 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(Data_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : RMII_TX_EN_Pin RMII_TXD0_Pin */
-  GPIO_InitStruct.Pin = RMII_TX_EN_Pin|RMII_TXD0_Pin;
+  GPIO_InitStruct.Pin = RMII_TX_EN_Pin | RMII_TXD0_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   GPIO_InitStruct.Alternate = GPIO_AF11_ETH;
   HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
-
 }
 
 /* USER CODE BEGIN 4 */
 // print on uart
-void print(UART_HandleTypeDef *huart, char* text){
-  HAL_UART_Transmit(huart, (uint8_t*)text, strlen(text), 0xFFFF);
+void print(UART_HandleTypeDef *huart, char *text)
+{
+  HAL_UART_Transmit(huart, (uint8_t *)text, strlen(text), 0xFFFF);
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  /**
+   * This interrupt is used to start the clock to retrieve the data frame from the encoder
+  */
+  if (htim == &htim7)
+  {
+    HAL_TIM_Base_Stop(&htim7);
+    // The next line it is not necessary but can be a good practice
+    __HAL_TIM_SET_COUNTER(&htim7, 0);
+    HAL_TIM_Base_Start(&htim6);
+    HAL_TIM_Base_Start_IT(&htim6);
+  }
+
+  if (htim == &htim6)
+  {
+  }
 }
 
 /* USER CODE END 4 */
@@ -445,7 +483,7 @@ void Error_Handler(void)
   /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.
@@ -454,7 +492,7 @@ void Error_Handler(void)
   * @retval None
   */
 void assert_failed(uint8_t *file, uint32_t line)
-{ 
+{
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
