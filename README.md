@@ -19,8 +19,8 @@ Sensors Repository for Fenice
 
 ### How it works
 The sensor is made from two components: 
-- **A magnet**: is a small magnet to put in the middle of the encoder, and by rotating it, the encoder will detect and transmit the precise rotaion angle.
-- **The Encoder**: it reads the magnetic signal from the magnet and transforms the signal from analogic to digital. Then based on the clock given as input, it will transmitt a binary number with the absolute angle of the position of the magnet.
+- **A magnet**: is a small magnet to put in the middle of the encoder, and by rotating it, the encoder will detect and transmit the precise rotation angle.
+- **The Encoder**: it reads the magnetic signal from the magnet and transforms the signal from analogic to digital. Then based on the clock given as input, it will transmit a binary number with the absolute angle of the position of the magnet.
 ![][clock_data]
 
 ### Usage
@@ -30,7 +30,7 @@ The input is a data frame of 12 Bits representing the absolute position of the m
 - **Absolute Position**: Is the absolute position of the magnet on the encoder.
 - **Absolute Angle**: Is the amount by which the steering was rotated in one of the direction __right__ or __left__.
 #### Process
-- **Clock**: One GPIO pin is giving the clock to the encoder in order to have a successful SSI communication.
+- **Clock**: One GPIO pin is giving the clock to the encoder to have a successful SSI communication.
 - **Data**: The other GPIO pin involved with the encoder is reading the data frame transmitted by the encoder.
 - **Timers**: There are two timers to make the measure work properly.  
     - **TIM6**: This timer is giving the clock to read the data frame from the encoder. At every __rising__ signal a new bit will be avaible on the GPIO pin. 

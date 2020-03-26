@@ -49,7 +49,7 @@ TIM_HandleTypeDef htim7;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-void print(UART_HandleTypeDef *huart, char* text);
+char hmessage[256] = "";
 
 /* USER CODE END PV */
 
@@ -60,6 +60,7 @@ static void MX_USART2_UART_Init(void);
 static void MX_TIM6_Init(void);
 static void MX_TIM7_Init(void);
 /* USER CODE BEGIN PFP */
+void print(UART_HandleTypeDef *huart, char* text);
 
 /* USER CODE END PFP */
 
@@ -103,6 +104,8 @@ int main(void)
   /* USER CODE BEGIN 2 */
   HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0); 
 
+  //Enabling the Timer that gives the time between each reading
+
 
   /* USER CODE END 2 */
 
@@ -111,25 +114,32 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-    HAL_Delay(1000);
+    HAL_Delay(100);
 
     HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
     HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
 
-    HAL_Delay(1000);
+    HAL_Delay(100);
 
     HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14);
     HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
 
-    HAL_Delay(1000);
+    HAL_Delay(100);
 
     HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14);
     HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
 
-    HAL_Delay(1000);
+    HAL_Delay(100);
 
     HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
     HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
+
+    char *msg = "Hello Nucleo Fun!\n\r";
+
+  HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), 0xFFFF);
+
+    sprintf(hmessage, "All working");
+    print(&huart2, hmessage);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -428,7 +438,7 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 // print on uart
 void print(UART_HandleTypeDef *huart, char* text){
-  HAL_UART_Transmit(huart, (uint8_t*)text, strlen(text), 5);
+  HAL_UART_Transmit(huart, (uint8_t*)text, strlen(text), 0xFFFF);
 }
 
 /* USER CODE END 4 */
