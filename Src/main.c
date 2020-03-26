@@ -184,6 +184,15 @@ int main(void)
     HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
     HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
 
+  char altro[200] = "";
+  int val = -1;
+  int val2 = -1;
+
+  val = __HAL_TIM_GET_COUNTER(&htim6);
+  val2 = __HAL_TIM_GET_COUNTER(&htim7);
+  sprintf(altro, "\r\n\n\n In the MAIN  =>  TIM6 = %d -- TIM7 = %d", val, val2);
+  print(&huart3, altro);
+
     // sprintf(hmessage, "All working");
     // print(&huart3, hmessage);
     /* USER CODE BEGIN 3 */
@@ -541,7 +550,7 @@ void read_steer_SSI()
       steer.data_count++;
     }
   }
-  else if (steer.data_count = steer.data_size)
+  else if (steer.data_count == steer.data_size)
   {
     /**
      * Now we can start to convert the binary number and get the angle of the steering.
@@ -549,6 +558,7 @@ void read_steer_SSI()
     */
 
     steer.converted_data = bin_dec(steer.data, steer.data_size);
+    steer.data_count = 0;
 
     char resolution_mes[256] = "";
     sprintf(resolution_mes, "\r\nresolution = %u \n", steer.converted_data);
