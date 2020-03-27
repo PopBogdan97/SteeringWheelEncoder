@@ -151,7 +151,6 @@ int main(void)
 
   steer.TimerInstance = &htim7;
 
-  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
 
   //Enabling the Timer that gives the time between each reading
   HAL_TIM_Base_Start(&htim7);
@@ -164,34 +163,15 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-    HAL_Delay(200);
 
-    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
-    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
+    char altro[200] = "";
+    int val = -1;
+    int val2 = -1;
 
-    HAL_Delay(200);
-
-    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14);
-    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
-
-    HAL_Delay(200);
-
-    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14);
-    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
-
-    HAL_Delay(200);
-
-    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
-    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
-
-  char altro[200] = "";
-  int val = -1;
-  int val2 = -1;
-
-  val = __HAL_TIM_GET_COUNTER(&htim6);
-  val2 = __HAL_TIM_GET_COUNTER(&htim7);
-  sprintf(altro, "\r\n\n\n In the MAIN  =>  TIM6 = %d -- TIM7 = %d", val, val2);
-  print(&huart3, altro);
+    val = __HAL_TIM_GET_COUNTER(&htim6);
+    val2 = __HAL_TIM_GET_COUNTER(&htim7);
+    sprintf(altro, "\r\n\n\n In the MAIN  =>  TIM6 = %d -- TIM7 = %d", val, val2);
+    print(&huart3, altro);
 
     // sprintf(hmessage, "All working");
     // print(&huart3, hmessage);
@@ -275,7 +255,7 @@ static void MX_TIM6_Init(void)
   htim6.Instance = TIM6;
   htim6.Init.Prescaler = 215;
   htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim6.Init.Period = 3;
+  htim6.Init.Period = 99;
   htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
   {
@@ -490,13 +470,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
   val = __HAL_TIM_GET_COUNTER(&htim6);
   val2 = __HAL_TIM_GET_COUNTER(&htim7);
-  sprintf(mes, "\r\n TIM6 = %d -- TIM7 = %d", val, val2);
-  print(&huart3, mes);
+  // sprintf(mes, "\r\n TIM6 = %d -- TIM7 = %d", val, val2);
+  // print(&huart3, mes);
   /**
    * This interrupt is used to start the clock to retrieve the data frame from the encoder
   */
   if (htim == &htim7)
   {
+    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
     HAL_TIM_Base_Stop(&htim7);
     // The next line it is not necessary but can be a good practice
     __HAL_TIM_SET_COUNTER(&htim7, 0);
@@ -506,26 +487,27 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
   if (htim == &htim6)
   {
+    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14);
     read_steer_SSI();
   }
 }
 
 void read_steer_SSI()
 {
-  char message[256] = "";
-  char message2[256] = "";
-  char mes[200] = "";
-  int val = -1;
-  int val2 = -1;
+  // char message[256] = "";
+  // char message2[256] = "";
+  // char mes[200] = "";
+  // int val = -1;
+  // int val2 = -1;
 
-  sprintf(message, "\r\n data_count = %u -- clock_status = %u", steer.data_count, steer.clock_status);
-  // sprintf(message2, "\r\nSpeed1 = %f -- Speed2 = %f", wheel_speed, wheel_speed2);
-  print(&huart3, message);
-  // print(&huart3, message2);
-  val = __HAL_TIM_GET_COUNTER(&htim6);
-  val2 = __HAL_TIM_GET_COUNTER(&htim7);
-  sprintf(mes, "\r\n Inside the SSI  =>  TIM6 = %d -- TIM7 = %d", val, val2);
-  print(&huart3, mes);
+  // sprintf(message, "\r\n data_count = %u -- clock_status = %u", steer.data_count, steer.clock_status);
+  // // sprintf(message2, "\r\nSpeed1 = %f -- Speed2 = %f", wheel_speed, wheel_speed2);
+  // print(&huart3, message);
+  // // print(&huart3, message2);
+  // val = __HAL_TIM_GET_COUNTER(&htim6);
+  // val2 = __HAL_TIM_GET_COUNTER(&htim7);
+  // sprintf(mes, "\r\n Inside the SSI  =>  TIM6 = %d -- TIM7 = %d", val, val2);
+  // print(&huart3, mes);
   // check if the status of clock given as input for the encoder
   if (steer.data_count < steer.data_size)
   {
@@ -540,6 +522,10 @@ void read_steer_SSI()
       if (steer.data_count > 0)
       {
         steer.data[steer.data_count] = HAL_GPIO_ReadPin(steer.DataPinName, steer.DataPinNumber);
+        if (steer.data[steer.data_count])
+        {
+          HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
+        }
       }
     }
     else
@@ -560,9 +546,9 @@ void read_steer_SSI()
     steer.converted_data = bin_dec(steer.data, steer.data_size);
     steer.data_count = 0;
 
-    char resolution_mes[256] = "";
-    sprintf(resolution_mes, "\r\nresolution = %u \n", steer.converted_data);
-    print(&huart3, resolution_mes);
+    // char resolution_mes[256] = "";
+    // sprintf(resolution_mes, "\r\nresolution = %u \n", steer.converted_data);
+    // print(&huart3, resolution_mes);
 
     // stop the timer 6 and restart the timer 7
     HAL_TIM_Base_Stop(&htim6);
