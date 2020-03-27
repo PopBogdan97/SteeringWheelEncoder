@@ -1,4 +1,4 @@
-build/main.o: Src/main.c Inc/main.h \
+build/Eagle_TRT.o: Src/Eagle_TRT.c Inc/Eagle_TRT.h \
  Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal.h \
  Inc/stm32f7xx_hal_conf.h \
  Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_rcc.h \
@@ -26,10 +26,9 @@ build/main.o: Src/main.c Inc/main.h \
  Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_tim.h \
  Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_tim_ex.h \
  Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_uart.h \
- Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_uart_ex.h Inc/Eagle_TRT.h \
- Inc/stm32f7xx_it.h
+ Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_uart_ex.h
 
-Inc/main.h:
+Inc/Eagle_TRT.h:
 
 Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal.h:
 
@@ -90,7 +89,3 @@ Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_tim_ex.h:
 Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_uart.h:
 
 Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_hal_uart_ex.h:
-
-Inc/Eagle_TRT.h:
-
-Inc/stm32f7xx_it.h:

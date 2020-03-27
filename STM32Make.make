@@ -54,6 +54,7 @@ Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim.c \
 Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_tim_ex.c \
 Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart.c \
 Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart_ex.c \
+Src/Eagle_TRT.c \
 Src/main.c \
 Src/stm32f7xx_hal_msp.c \
 Src/stm32f7xx_it.c \

@@ -3,5 +3,8 @@
     "cortex-debug.openocdPath": "openocd",
     "stm32-for-vscode.makePath": "make",
     "stm32-for-vscode.armToolchainPath": "",
-    "cortex-debug.armToolchainPath": ""
+    "cortex-debug.armToolchainPath": "",
+    "files.associations": {
+        "eagle_trt.h": "c"
+    }
 }
