@@ -34,7 +34,7 @@ The input is a data frame of 12 Bits representing the absolute position of the m
 - **Data**: The other GPIO pin involved with the encoder is reading the data frame transmitted by the encoder.
 - **Timers**: There are two timers to make the measure work properly.  
     - **TIM6**: This timer is giving the clock to read the data frame from the encoder. At every __rising__ signal a new bit will be avaible on the GPIO pin. 
-    ***Frequency***: 3MHz
+    ***Frequency***: 50KHz
     - **TIM7**: This timer gives the period between each measure of the absolute position of the magnet. We need at least 2 measures to detect one movement.
     ***Period***: 0.5s 
 
