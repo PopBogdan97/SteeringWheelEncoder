@@ -10,7 +10,7 @@ Sensors Repository for Fenice
         - **Minimum time between stream** => 12.5us <= t <= 20.5us
     - **Data Input** => Clock (RS422) 
         - **MAX Clock** => 4MHz
-        - **Actual Clock** => 3MHz 
+        - **Actual Clock** => 50KHz 
     - **Accuracy** => ±0.5°  
     - **Resolution** => 4096 positions per revolution
 - **Price**  
